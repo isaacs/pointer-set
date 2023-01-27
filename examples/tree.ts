@@ -10,11 +10,11 @@
 // Cycles are detected during depth/breadth walks, and
 // each node is only traversed once.
 
-import { nullPointer, Pointer, PointerSet } from '../'
+import { nullPointer, Pointer, PointerSet, PointerSetValueType } from '../'
 
 const keys = ['next', 'prev', 'chead', 'ctail', 'parent'] as const
 type K = typeof keys
-export class Tree<T> {
+export class Tree<T extends PointerSetValueType> {
   store: PointerSet<T, K, []>
   acyclic: boolean
 

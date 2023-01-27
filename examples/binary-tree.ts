@@ -1,8 +1,8 @@
-import { nullPointer, Pointer, PointerSet } from '../'
+import { nullPointer, Pointer, PointerSet, PointerSetValueType } from '../'
 
 const keys = ['left', 'right', 'parent'] as const
 type Keys = typeof keys
-export class BinaryTree<T = number> {
+export class BinaryTree<T extends PointerSetValueType = number> {
   store: PointerSet<T, Keys, []>
   comparator: (a: T, b: T) => number
 
@@ -38,7 +38,7 @@ export class BinaryTree<T = number> {
 
   walk(
     node: Pointer,
-    fn: (v: T, p: Pointer, depth: number) => any,
+    fn: (v: T | undefined, p: Pointer, depth: number) => any,
     depth = 0,
     includeNull = false
   ) {
@@ -46,10 +46,10 @@ export class BinaryTree<T = number> {
     const right = this.store.ref(node, 'right')
     const value = this.store.value(node) as T
     if (left) this.walk(left, fn, depth + 1)
-    else if (includeNull) fn(0 as T, nullPointer, depth + 1)
+    else if (includeNull) fn(undefined, nullPointer, depth + 1)
     fn(value, node, depth)
     if (right) this.walk(right, fn, depth + 1)
-    else if (includeNull) fn(0 as T, nullPointer, depth + 1)
+    else if (includeNull) fn(undefined, nullPointer, depth + 1)
   }
 
   add(value: T, parent: Pointer = nullPointer): Pointer {

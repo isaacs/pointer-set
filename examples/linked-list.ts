@@ -1,14 +1,14 @@
-import { nullPointer, Pointer, PointerSet } from '../'
+import { nullPointer, Pointer, PointerSet, PointerSetValueType } from '../'
 
 const fields = ['next', 'prev'] as const
-export class LinkedList<T> {
+export class LinkedList<T extends PointerSetValueType> {
   head: Pointer = nullPointer
   tail: Pointer = nullPointer
   store: PointerSet<T, typeof fields>
 
   // let two linked lists share a store
   constructor(store?: PointerSet<T, typeof fields>) {
-    this.store = store || new PointerSet(fields, 256)
+    this.store = store || new PointerSet<T, typeof fields>(fields, 256)
   }
 
   unshift(value: T) {

@@ -93,6 +93,12 @@ type Index = number & { [T]: 'index' }
  * storing the blockId of the block where the pointer is allocated.
  */
 export type Pointer = number & { [T]: 'pointer' }
+/**
+ * The set of valid types for T when instantiating a PointerSet.
+ *
+ * Any value other than `undefined`
+ */
+export type PointerSetValueType = {} | null
 type FieldId = number & { [T]: 'fieldId' }
 type BlockSize = number & { [T]: 'blockSize' }
 type WordSize = (1 | 2) & { [T]: 'wordSize' }
@@ -140,7 +146,7 @@ class Stack {
  * Abstract base class of PointerSet and PointerSetBlock
  */
 abstract class PointerSetBase<
-  T extends {} | null,
+  T extends PointerSetValueType,
   K extends readonly string[],
   R extends readonly string[] = []
 > {
@@ -706,7 +712,7 @@ abstract class PointerSetBase<
  * PointerSet block store.
  */
 export class PointerSet<
-    T extends {} | null,
+    T extends PointerSetValueType,
     K extends readonly string[],
     R extends readonly string[] = []
   >
@@ -794,7 +800,7 @@ export class PointerSet<
  * Exported for the benefit of type checking and extension use cases.
  */
 export class PointerSetBlock<
-    T extends {} | null,
+    T extends PointerSetValueType,
     K extends readonly string[],
     R extends readonly string[] = []
   >
@@ -885,7 +891,7 @@ export class PointerSetBlock<
  *     // note the empty () here --------------^^
  */
 export const pointerSetInfer =
-  <T extends {} | null>() =>
+  <T extends PointerSetValueType>() =>
   <K extends readonly string[], R extends readonly string[] = []>(
     fields: K,
     blockSize?: number,
@@ -910,11 +916,9 @@ export const PointerSetInferFields = <
   fields: K,
   rawFields?: R
 ) =>
-  class PointerSetInferFields<T extends {} | null> extends PointerSet<
-    T,
-    K,
-    R
-  > {
+  class PointerSetInferFields<
+    T extends PointerSetValueType
+  > extends PointerSet<T, K, R> {
     constructor(blockSize?: number) {
       super(fields, blockSize, rawFields)
     }
