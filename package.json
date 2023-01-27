@@ -83,6 +83,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/isaacs/heap"
+    "url": "git+https://github.com/isaacs/pointer-set"
   }
 }
