@@ -135,6 +135,22 @@ inferred, but the value will be left as `any`, so there won't be
 any type checking of the data passed to `store.value(pointer,
 data)` method.
 
+## `nullPointer: 0 as Pointer`
+
+For convenience, a reference to the null pointer is exported.
+It's just the number `0` cast to the `Pointer` type.
+
+## type `Pointer`
+
+A pointer is just a number in the unsigned 32 bit range (ie,
+between `0` and `2**32 - 1`).  The exported type is branded with
+a unique symbol.
+
+For safety, all methods that expect to get a `Pointer` will use
+this branded type, to prevent you from accentally using a pointer
+reference that was not provided by this library.  However, for
+cases where you may need to cast to the type, it's exported.
+
 ## Class `PointerSet<T, K extends readonly string[], R extends readonly string[] = []>`
 
 This is the class that represents an expanding data store of
