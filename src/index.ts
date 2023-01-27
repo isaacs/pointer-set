@@ -6,13 +6,25 @@ const mask8 = 255
 const mask16 = 65535
 const mask24 = 16777215
 
+/**
+ * error raised when trying to access a pointer value as raw uint32
+ */
 export const errPointerAsRaw = (f: string) =>
   new TypeError('cannot access pointer field as raw uint32: ' + f)
+/**
+ * error raised when trying to access a raw uint32 value as a pointer
+ */
 export const errRawAsPointer = (f: string) =>
   new TypeError('cannot access raw uint32 field as pointer: ' + f)
-export const errUnknownRawField = (f:string) =>
+/**
+ * error raised when attempting to access an unknown raw field
+ */
+export const errUnknownRawField = (f: string) =>
   new TypeError('unknown raw uint32 field: ' + f)
-export const errUnknownPointerField = (f:string) =>
+/**
+ * error raised when attempting to access an unknown pointer field
+ */
+export const errUnknownPointerField = (f: string) =>
   new TypeError('unknown pointer field: ' + f)
 
 const getWordSize = (max: BlockSize): WordSize =>
@@ -74,6 +86,7 @@ type BlockId = number & { [T]: 'blockId' }
 type Index = number & { [T]: 'index' }
 /**
  * Type representing a Pointer.
+ *
  * An unsigned 32-bit integer, where the low 8 or 16 bytes represent
  * the index within the stack (8 if the block size is 256 or lower,
  * 16 otherwise), and the remaining bytes (3 or 2, respectively)
@@ -131,7 +144,6 @@ abstract class PointerSetBase<
   K extends readonly string[],
   R extends readonly string[] = []
 > {
-
   /**
    * Stack of blocks in the set
    */
@@ -690,8 +702,8 @@ abstract class PointerSetBase<
 }
 
 /**
- * Public interface to create a PointerSet, also represents the
- * initial block of data.
+ * Class representing the root block of and public interface to a
+ * PointerSet block store.
  */
 export class PointerSet<
     T extends {} | null,
@@ -724,6 +736,10 @@ export class PointerSet<
   // indexes of that have been freed
   freeList: Stack
 
+  /**
+   * Public interface to create a PointerSet, also representing the
+   * first block of data.
+   */
   constructor(fields: K, blockSize = 256, rawFields?: R) {
     super()
     this.blockSize = blockSize as BlockSize
@@ -805,6 +821,13 @@ export class PointerSetBlock<
   blockIdMask: BlockIdMask
   blockSize: BlockSize
 
+  /**
+   * Class representing an expanded block in a PointerSet data store.
+   * These are created on demand, they are NOT intended to be instantiated
+   * directly.
+   *
+   * Exported for the benefit of type checking and extension use cases.
+   */
   constructor(
     blocks: PointerSetBlock<T, K, R>[],
     blocksAvail: Set<PointerSetBlock<T, K, R>>,
