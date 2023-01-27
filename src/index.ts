@@ -72,6 +72,13 @@ type FieldName<K> = K extends readonly string[] ? keyof RefSet<K> : never
 const T = Symbol('type')
 type BlockId = number & { [T]: 'blockId' }
 type Index = number & { [T]: 'index' }
+/**
+ * Type representing a Pointer.
+ * An unsigned 32-bit integer, where the low 8 or 16 bytes represent
+ * the index within the stack (8 if the block size is 256 or lower,
+ * 16 otherwise), and the remaining bytes (3 or 2, respectively)
+ * storing the blockId of the block where the pointer is allocated.
+ */
 export type Pointer = number & { [T]: 'pointer' }
 type FieldId = number & { [T]: 'fieldId' }
 type BlockSize = number & { [T]: 'blockSize' }
@@ -95,7 +102,9 @@ const noNullPointer = (p: Pointer, v: any = NOVALUE) => {
   }
 }
 
-// a handy reference to the null pointer
+/**
+ * a Pointer of value 0, exported for convenience
+ */
 export const nullPointer = 0 as Pointer
 
 // the internal stack of free items
@@ -122,44 +131,121 @@ abstract class PointerSetBase<
   K extends readonly string[],
   R extends readonly string[] = []
 > {
+
+  /**
+   * Stack of blocks in the set
+   */
   abstract blocks: PointerSetBlock<T, K, R>[]
+  /**
+   * Set of blocks that have some space available
+   */
   abstract blocksAvail: Set<PointerSetBlock<T, K, R>>
+  /**
+   * Array of values, or undefined if the pointer is freed
+   */
   abstract values: (T | undefined)[]
+  /**
+   * The next index that is free for use.  Note that if there
+   * are any indexes in freeList, those are used first.
+   */
   abstract nextFree: Index
+  /**
+   * The numeric idenfier for this block in the set
+   */
   abstract blockId: BlockId
 
+  /**
+   * array of slabs to store pointer references, one for each field in K
+   */
   abstract fields: Uint32Array[]
+  /**
+   * array of slabs to store raw uint32 data, one for each field in R
+   */
   abstract rawFields: Uint32Array[]
+  /**
+   * Mapping of field and rawField names to FieldId values.
+   * Raw fields have a negative value, which is the bitwise-not
+   * of the index within rawFields
+   */
   abstract names: { [k in FieldName<K> | FieldName<R>]: FieldId }
+  /**
+   * 1 for blockSize <= 256, 2 otherwise
+   */
   abstract wordSize: WordSize
+  /**
+   * number of bits to shift when converting a pointer to a blockId
+   */
   abstract shift: Shift
-  // fix for shifting resulting in overflow
-  // Math.pow(2, 32 - 8 * wordSize)
-  // 2**24 for shift 8, 2**16 for shift 16
+  /**
+   * fix for when shifting to get the blockId results in overflow.
+   * Equal to 2**(32 - 8 * wordSize), so
+   * 2**24 for shift 8, 2**16 for shift 16
+   */
   abstract shiftDownFix: ShiftDownFix
-  // Math.pow(2, 32)
+  /**
+   * shifting UP to get a block id from a pointer always overflows
+   * in the same way, because we are converting from an int32 into
+   * a uint32
+   */
   shiftUpFix: ShiftUpFix = max32 as ShiftUpFix
+  /**
+   * mask to get the index from a pointer.
+   * Equal to 2**(8 * wordSize) - 1
+   */
   abstract mask: Mask
+  /**
+   * Mask for detecting when a blockId goes out of range.
+   */
   abstract blockIdMask: BlockIdMask
+  /**
+   * number of entries stored in each block.
+   * Must be less than 65536
+   */
   abstract blockSize: BlockSize
+  /**
+   * The first 'nextFree' value.
+   * 0 for extension blocks, 1 for the root block, because the root
+   * block's 0-index entry is the null pointer.
+   */
   abstract firstNextFree: FirstNextFree
 
-  // indexes of that have been freed
+  /**
+   * Indexes that have been freed and can be re-used.
+   */
   abstract freeList: Stack
 
+  /**
+   * For internal use: get a BlockId from a Pointer
+   */
   getBlockId(p: Pointer): BlockId {
     const b = p >> this.shift
     return (b >= 0 ? b : this.shiftDownFix + b) as BlockId
   }
+  /**
+   * For internal use: get an Index from a Pointer
+   */
   getIndex(p: Pointer): Index {
     return (p & this.mask) as Index
   }
+  /**
+   * For internal use: get a Pointer from a BlockId and Index
+   */
   getPointer(blockId: BlockId, index: Index): Pointer {
     const b = blockId << this.shift
     const p = (b >= 0 ? b : this.shiftUpFix + b) | index
     return p as Pointer
   }
 
+  /**
+   * Allocate a new pointer in the set, associated with the supplied
+   * value parameter.
+   *
+   * Any pointers passed in the `refs` argument are assigned as pointers
+   * stored in the associated `fields` slab.
+   *
+   * Any raw numeric values in the `raws` argument are stored in the
+   * associated `rawFields` slab.
+   */
   alloc(value: T, refs?: RefSet<K>, raw?: RawSet<R>): Pointer {
     // put it in the most recently freed spot, or the next unwritten spot
     // else, try to put it in the first available block
@@ -231,6 +317,16 @@ abstract class PointerSetBase<
     ).alloc(value, refs, raw)
   }
 
+  /**
+   * Mark a Pointer location as free for re-use, and delete its value
+   * from the `values` array.
+   *
+   * Note that this does *not* delete raw values and references from the
+   * relevant data slabs, so it is still possible to dereference previously
+   * freed pointers, and get their former values.
+   *
+   * See `erase()` if you need this.
+   */
   free(pointer: Pointer): void {
     if (pointer === nullPointer) {
       throw new TypeError('cannot free null pointer')
@@ -267,7 +363,13 @@ abstract class PointerSetBase<
     this.blocksAvail.add(this)
   }
 
-  // like free(), but also nulls out any pointers
+  /**
+   * Mark a pointer location as free for re-use, delete its value from
+   * the `values` array, and set any refs and raw values to 0.
+   *
+   * See also `free()` for a faster version of this that does not set
+   * the data in the fields/rawFields slabs to 0.
+   */
   erase(pointer: Pointer): void {
     if (pointer === nullPointer) {
       throw new TypeError('cannot erase null pointer')
@@ -290,10 +392,9 @@ abstract class PointerSetBase<
     }
   }
 
-  // like erase(), but erases EVERYTHING
-  // this is slower than necessary if we haven't stored any
-  // values, but also has the side effect of making the slabs
-  // "safe" allocated buffers, if they weren't already.
+  /**
+   * Erase *all* data in the slab.
+   */
   wipeBlock(): void {
     for (const slab of this.fields) {
       slab.fill(0)
@@ -311,6 +412,9 @@ abstract class PointerSetBase<
     this.blocksAvail.add(this)
   }
 
+  /**
+   * get all reference values, or set zero or more in an object
+   */
   refAll(pointer: Pointer, refs?: RefSet<K>): RefSet<K> {
     noNullPointer(pointer, refs)
     const blockId = this.getBlockId(pointer)
@@ -429,7 +533,13 @@ abstract class PointerSetBase<
     }
   }
 
+  /**
+   * Get the reference from the supplied pointer, in the specified field
+   */
   ref(pointer: Pointer, field: FieldName<K>): Pointer
+  /**
+   * Set the reference from the supplied pointer, in the specified field
+   */
   ref(pointer: Pointer, field: FieldName<K>, target: Pointer): Pointer
   ref(pointer: Pointer, field: FieldName<K>, target?: Pointer): Pointer {
     noNullPointer(pointer, target)
@@ -451,8 +561,13 @@ abstract class PointerSetBase<
     }
   }
 
-  // get/set rawField values
+  /**
+   * Get the raw data from the supplied pointer, in the specified rawField
+   */
   raw(pointer: Pointer, field: FieldName<R>): number
+  /**
+   * Set the raw data from the supplied pointer, in the specified rawField
+   */
   raw(pointer: Pointer, field: FieldName<R>, val: number): number
   raw(pointer: Pointer, field: FieldName<R>, val?: number): number {
     noNullPointer(pointer, val)
@@ -473,10 +588,16 @@ abstract class PointerSetBase<
     }
   }
 
-  // get/set the T value
+  /**
+   * Get the data for a given pointer from the `values` array
+   */
   value(pointer: Pointer): T | undefined
+  /**
+   * Set the data for a given pointer in the `values` array
+   */
   value(pointer: Pointer, val: T): T
   value(pointer: Pointer, val?: T): T | undefined {
+    noNullPointer(pointer, val)
     const blockId = this.getBlockId(pointer)
     const index = this.getIndex(pointer)
     return val !== undefined
@@ -484,7 +605,10 @@ abstract class PointerSetBase<
       : this.blocks[blockId].values[index]
   }
 
-  // drop this block entirely, or erase if the root block
+  /**
+   * Drop block from the set, or `wipeBlock()` if the root block.
+   * Only allowed on the last block in the stack.
+   */
   drop() {
     if (this.blockId !== this.blocks.length - 1) {
       throw new Error('only the final block may be dropped')
@@ -497,7 +621,9 @@ abstract class PointerSetBase<
     }
   }
 
-  // drop any empty blocks off the end
+  /**
+   * Pop any empty blocks off the end of the stack.
+   */
   dropEmpty(): void {
     const blocks = this.blocks
     for (let i = this.blocks.length - 1; i > 0; i--) {
@@ -507,12 +633,18 @@ abstract class PointerSetBase<
     }
   }
 
+  /**
+   * number of entries in a given block
+   */
   entryCount(blockId: number): number {
     if (blockId !== this.blockId) {
       return this.blocks[blockId].entryCount(blockId)
     }
     return this.nextFree - this.freeList.length
   }
+  /**
+   * number of available spaces in a given block
+   */
   available(blockId: number): number {
     if (blockId !== this.blockId) {
       return this.blocks[blockId].available(blockId)
@@ -520,6 +652,11 @@ abstract class PointerSetBase<
     return this.blockSize - this.entryCount(blockId)
   }
 
+  /**
+   * Total number of entries in the entire PointerSet
+   * Note that it is always at least 1, because the root
+   * block's zero-entry is reserved for the nullPointer.
+   */
   size(): number {
     let size = 0
     for (let i = 0; i < this.blocks.length; i++) {
@@ -527,6 +664,9 @@ abstract class PointerSetBase<
     }
     return size
   }
+  /**
+   * Total number of available spaces in the entire PointerSet.
+   */
   totalAvailable(): number {
     let available = 0
     for (let i = 0; i < this.blocks.length; i++) {
@@ -535,6 +675,9 @@ abstract class PointerSetBase<
     return available
   }
 
+  /**
+   * Number of blocks in the PointerSet
+   */
   blocksCount(): number {
     return this.blocks.length
   }
@@ -629,7 +772,9 @@ export class PointerSet<
 
 /**
  * Class representing an expanded block in a PointerSet data store.
- * These are created on demand, they are to be instantiated directly.
+ * These are created on demand, they are NOT intended to be instantiated
+ * directly.
+ *
  * Exported for the benefit of type checking and extension use cases.
  */
 export class PointerSetBlock<

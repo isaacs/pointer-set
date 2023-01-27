@@ -83,6 +83,13 @@ t.test('basic behavior', async t => {
     store.alloc('badptr', {}, { asdf: nullPointer })
   }, errUnknownRawField('asdf'))
 
+
+  t.throws(() => {
+    store.value(nullPointer)
+  }, TypeError('cannot read from null pointer'))
+  t.throws(() => {
+    store.value(nullPointer, 'asdf')
+  }, TypeError('cannot write to null pointer'))
   t.throws(() => {
     store.ref(nullPointer, 'x', nullPointer)
   }, TypeError('cannot write to null pointer'))
