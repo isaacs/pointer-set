@@ -1,6 +1,6 @@
 {
   "name": "pointer-set",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "set of values with pointers to other entries, backed by auto=-expanding UintArray slabs",
   "keywords": [
     "linked list",
