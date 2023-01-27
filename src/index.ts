@@ -13,7 +13,7 @@ export const errRawAsPointer = (f: string) =>
 export const errUnknownRawField = (f:string) =>
   new TypeError('unknown raw uint32 field: ' + f)
 export const errUnknownPointerField = (f:string) =>
-  new TypeError('unknown raw uint32 field: ' + f)
+  new TypeError('unknown pointer field: ' + f)
 
 const getWordSize = (max: BlockSize): WordSize =>
   (max <= max8 ? 1 : max <= max16 ? 2 : 4) as WordSize
