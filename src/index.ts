@@ -589,8 +589,116 @@ abstract class PointerSetBase<
   raw(pointer: Pointer, field: FieldName<R>, val: number): number
   raw(pointer: Pointer, field: FieldName<R>, val?: number): number {
     noNullPointer(pointer, val)
-    const blockId = this.getBlockId(pointer)
     const index = this.getIndex(pointer)
+    const slab = this.getRawSlab(pointer, field)
+    if (val === undefined) {
+      return slab[index]
+    } else {
+      return (slab[index] = val)
+    }
+  }
+
+  /**
+   * Get the raw data from the supplied pointer, in the supplied rawField,
+   * as a 4-byte Uint8Array view.  Editing the view will update the value.
+   */
+  raw8(pointer: Pointer, field: FieldName<R>): Uint8Array
+  /**
+   * Set the raw data for the supplied pointer, in the supplied rawField,
+   * to the values set in a 4-byte Uint8Array. Returns a 4-byte Uint8Array
+   * view. Editing the view will update the value.
+   */
+  raw8(pointer: Pointer, field: FieldName<R>, val: Uint8Array): Uint8Array
+  raw8(
+    pointer: Pointer,
+    field: FieldName<R>,
+    val?: Uint8Array
+  ): Uint8Array {
+    const index = this.getIndex(pointer)
+    const slab = this.getRawSlab(pointer, field)
+    const view = new Uint8Array(
+      slab.buffer,
+      slab.byteOffset + index * 4,
+      4
+    )
+    if (val !== undefined) {
+      view[0] = val[0]
+      view[1] = val[1]
+      view[2] = val[2]
+      view[3] = val[3]
+    }
+    return view
+  }
+
+  /**
+   * Get the raw data from the supplied pointer, in the supplied rawField,
+   * as a 2-word Uint16Array view.  Editing the view will update the value.
+   */
+  raw16(pointer: Pointer, field: FieldName<R>): Uint16Array
+  /**
+   * Set the raw data for the supplied pointer, in the supplied rawField,
+   * to the values set in a 2-word Uint16Array. Returns a 2-word Uint16Array
+   * view. Editing the view will update the value.
+   */
+  raw16(
+    pointer: Pointer,
+    field: FieldName<R>,
+    val: Uint16Array
+  ): Uint16Array
+  raw16(
+    pointer: Pointer,
+    field: FieldName<R>,
+    val?: Uint16Array
+  ): Uint16Array {
+    const index = this.getIndex(pointer)
+    const slab = this.getRawSlab(pointer, field)
+    const view = new Uint16Array(
+      slab.buffer,
+      slab.byteOffset + index * 4,
+      2
+    )
+    if (val !== undefined) {
+      view[0] = val[0]
+      view[1] = val[1]
+    }
+    return view
+  }
+
+  /**
+   * Get the raw data from the supplied pointer, in the supplied rawField,
+   * as a 1-word Uint32Array view.  Editing the view will update the value.
+   */
+  raw32(pointer: Pointer, field: FieldName<R>): Uint32Array
+  /**
+   * Set the raw data for the supplied pointer, in the supplied rawField,
+   * to the values set in a 1-word Uint32Array. Returns a 1-word Uint32Array
+   * view. Editing the view will update the value.
+   */
+  raw32(
+    pointer: Pointer,
+    field: FieldName<R>,
+    val: Uint32Array
+  ): Uint32Array
+  raw32(
+    pointer: Pointer,
+    field: FieldName<R>,
+    val?: Uint32Array
+  ): Uint32Array {
+    const slab = this.getRawSlab(pointer, field)
+    const index = this.getIndex(pointer)
+    const view = new Uint32Array(
+      slab.buffer,
+      slab.byteOffset + index * 4,
+      1
+    )
+    if (val !== undefined) {
+      view[0] = val[0]
+    }
+    return view
+  }
+
+  getRawSlab(pointer: Pointer, field: FieldName<R>): Uint32Array {
+    const blockId = this.getBlockId(pointer)
     const fieldId = this.names[field]
     if (fieldId >= 0) {
       throw errPointerAsRaw(field)
@@ -599,11 +707,7 @@ abstract class PointerSetBase<
     if (!slab) {
       throw errUnknownRawField(field)
     }
-    if (val === undefined) {
-      return slab[index]
-    } else {
-      return (slab[index] = val)
-    }
+    return slab
   }
 
   /**

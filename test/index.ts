@@ -83,7 +83,6 @@ t.test('basic behavior', async t => {
     store.alloc('badptr', {}, { asdf: nullPointer })
   }, errUnknownRawField('asdf'))
 
-
   t.throws(() => {
     store.value(nullPointer)
   }, TypeError('cannot read from null pointer'))
@@ -325,17 +324,70 @@ t.test('expand', async t => {
 
   // mostly just for coverage, to use a uint16 array
   const bigStore = new PointerSet<string, [], []>([], 1000, [])
-  for (let i = 0; i < 2**16; i++) {
+  for (let i = 0; i < 2 ** 16; i++) {
     bigStore.alloc('x')
   }
   // these should not be accessed directly, private types ensure this
   //@ts-expect-error
-  const ptr1 =store.getPointer(2**24 - 1, 123)
-  t.equal(store.getBlockId(ptr1), 2**24 - 1)
+  const ptr1 = store.getPointer(2 ** 24 - 1, 123)
+  t.equal(store.getBlockId(ptr1), 2 ** 24 - 1)
   t.equal(store.getIndex(ptr1), 123)
 
   //@ts-expect-error
-  const ptr2 = bigStore.getPointer(2**16 - 1, 123)
-  t.equal(bigStore.getBlockId(ptr2), 2**16 - 1)
+  const ptr2 = bigStore.getPointer(2 ** 16 - 1, 123)
+  t.equal(bigStore.getBlockId(ptr2), 2 ** 16 - 1)
   t.equal(bigStore.getIndex(ptr2), 123)
+})
+
+t.test('extra raw data views', async t => {
+  const f = [] as const
+  const r = ['x']
+  const store = new PointerSet<null, typeof f, typeof r>(f, 10, r)
+  const p = store.alloc(null)
+  const u8 = store.raw8(p, 'x')
+  const u16 = store.raw16(p, 'x')
+  const u32 = store.raw32(p, 'x')
+  t.equal(store.raw(p, 'x'), 0)
+  t.same(u8, [0, 0, 0, 0])
+  t.same(u16, [0, 0])
+  t.same(u32, [0])
+  u32[0] = 1
+  t.equal(store.raw(p, 'x'), 1)
+  t.same(u8, [1, 0, 0, 0])
+  t.same(u16, [1, 0])
+  t.same(u32, [1])
+  {
+    const newVal = 1 + (2 << 8) + (3 << 16) + (4 << 24)
+    store.raw(p, 'x', newVal)
+    t.same(u8, [1, 2, 3, 4])
+    t.same(u16, [1 + (2 << 8), 3 + (4 << 8)])
+    t.same(u32, [newVal])
+  }
+
+  {
+    store.raw8(p, 'x', new Uint8Array([4, 3, 2, 1]))
+    const newVal = 4 + (3 << 8) + (2 << 16) + (1 << 24)
+    store.raw(p, 'x', newVal)
+    t.same(u8, [4, 3, 2, 1])
+    t.same(u16, [4 + (3 << 8), 2 + (1 << 8)])
+    t.same(u32, [newVal])
+  }
+
+  {
+    store.raw16(p, 'x', new Uint16Array([5 + (6 << 8), 7 + (8 << 8)]))
+    const newVal = 5 + (6 << 8) + (7 << 16) + (8 << 24)
+    store.raw(p, 'x', newVal)
+    t.same(u8, [5, 6, 7, 8])
+    t.same(u16, [5 + (6 << 8), 7 + (8 << 8)])
+    t.same(u32, [newVal])
+  }
+
+  {
+    const newVal = 7 + (1 << 8) + (7 << 16) + (9 << 24)
+    store.raw32(p, 'x', new Uint32Array([newVal]))
+    store.raw(p, 'x', newVal)
+    t.same(u8, [7, 1, 7, 9])
+    t.same(u16, [7 + (1 << 8), 7 + (9 << 8)])
+    t.same(u32, [newVal])
+  }
 })

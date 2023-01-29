@@ -55,13 +55,15 @@ const [t, s, e] = (() => {
     t()
     console.log(
       'times in ms/65536 operations, smaller is better\n' +
-      Object.entries(times)
-        .map(([t, v]) => [v, t])
-        .sort(([a], [b]) => a - b)
-        .map(([v, t]) =>
-          [(' '.repeat(10) + f.format(v / count)).slice(-9), t].join('\t')
-        )
-        .join('\n')
+        Object.entries(times)
+          .map(([t, v]) => [v, t])
+          .sort(([a], [b]) => a - b)
+          .map(([v, t]) =>
+            [(' '.repeat(10) + f.format(v / count)).slice(-9), t].join(
+              '\t'
+            )
+          )
+          .join('\n')
     )
   })
   const s = t => timer.s(t)
@@ -98,7 +100,7 @@ const fillEmpty = (arr = []) => {
 }
 
 const fillAllHolesOneUndef = (arr = []) => {
-  arr[2**16 - 1] = undefined
+  arr[2 ** 16 - 1] = undefined
   return arr
 }
 
@@ -172,7 +174,6 @@ const calcMidNoWrite = (arr, name, N) => {
   e('calc middle, using length ' + name)
 }
 
-
 const writeStart = (arr, name) => {
   s('write start ' + name)
   for (let i = 0; i < 2 ** 16; i++) {
@@ -194,7 +195,7 @@ const cases = [
 
 const N = 10
 const arrs = [
-  [ '[]', () => [] ],
+  ['[]', () => []],
   // no significant different found between these two
   // [ 'new Array(2**16)', () => new Array(2**16) ],
 ]

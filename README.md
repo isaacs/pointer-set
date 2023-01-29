@@ -143,12 +143,12 @@ It's just the number `0` cast to the `Pointer` type.
 ## type `Pointer`
 
 A pointer is just a number in the unsigned 32 bit range (ie,
-between `0` and `2**32 - 1`).  The exported type is branded with
+between `0` and `2**32 - 1`). The exported type is branded with
 a unique symbol.
 
 For safety, all methods that expect to get a `Pointer` will use
 this branded type, to prevent you from accentally using a pointer
-reference that was not provided by this library.  However, for
+reference that was not provided by this library. However, for
 cases where you may need to cast to the type, it's exported.
 
 ## Class `PointerSet<T, K extends readonly string[], R extends readonly string[] = []>`
@@ -157,7 +157,7 @@ This is the class that represents an expanding data store of
 entries, where each entry is a value of type `T`, and a set of
 pointers to other entries for each of the field names in `K`.
 
-The type `T` can be anything except `undefined`.  (If you aren't
+The type `T` can be anything except `undefined`. (If you aren't
 storing JavaScript values, `null` is a good option.)
 
 For notes on using type inferrence to set `K` and `R` types, see
@@ -396,7 +396,7 @@ PointerSet.
 ### `store.totalAvailable(): number`
 
 The total number of available entry slots in all blocks in the
-PointerSet.  Note that the storage will expand on demand, so this
+PointerSet. Note that the storage will expand on demand, so this
 is actually just the number of entries that can be set before
 another allocation will occur.
 
@@ -480,6 +480,42 @@ Specify one of the names provided in the `rawFields` list, and
 set the number value between `0` and `2**32` stored at the
 apporpriate address to the provided value.
 
+### `store.raw8(pointer: Pointer, field: FieldName<R>): Uint8Array`
+
+Specify one of the names provided in the `rawFields` list, and
+get an editable 4-byte Uint8Array view of the underlying bytes.
+
+### `store.raw8(pointer: Pointer, field: FieldName<R>, val: Uint8Array): Uint8Array`
+
+Specify one of the names provided in the `rawFields` list, and
+set the bytes to those specified in the supplied 4-byte
+Uint8Array. Returns an editable 4-byte Uint8Array view of the
+underlying bytes.
+
+### `store.raw16(pointer: Pointer, field: FieldName<R>): Uint16Array`
+
+Specify one of the names provided in the `rawFields` list, and
+get an editable 2-word Uint16Array view of the underlying bytes.
+
+### `store.raw16(pointer: Pointer, field: FieldName<R>, val: Uint16Array): Uint16Array`
+
+Specify one of the names provided in the `rawFields` list, and
+set the bytes to those specified in the supplied 2-word
+Uint16Array. Returns an editable 2-word Uint16Array view of the
+underlying bytes.
+
+### `store.raw32(pointer: Pointer, field: FieldName<R>): Uint32Array`
+
+Specify one of the names provided in the `rawFields` list, and
+get an editable 1-word Uint32Array view of the underlying bytes.
+
+### `store.raw32(pointer: Pointer, field: FieldName<R>, val: Uint32Array): Uint32Array`
+
+Specify one of the names provided in the `rawFields` list, and
+set the bytes to those specified in the supplied 1-word
+Uint32Array. Returns an editable 1-word Uint32Array view of the
+underlying bytes.
+
 ### `store.rawAll(pointer: Pointer) => raws`
 
 Get all the raw values as a JavaScript object, where the keys are
@@ -506,5 +542,5 @@ Drop any empty blocks from the end of the set.
 Remove a block from the set.
 
 Throws if the block has entries, or if any subsequent blocks
-exist.  When called on the root block, calls `store.wipeBlock()`
+exist. When called on the root block, calls `store.wipeBlock()`
 instead.
