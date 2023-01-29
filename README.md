@@ -480,41 +480,59 @@ Specify one of the names provided in the `rawFields` list, and
 set the number value between `0` and `2**32` stored at the
 apporpriate address to the provided value.
 
-### `store.raw8(pointer: Pointer, field: FieldName<R>): Uint8Array`
+### `store.raw8(pointer: Pointer, field: FieldName<R>): Uint8ArrayLength4`
 
 Specify one of the names provided in the `rawFields` list, and
 get an editable 4-byte Uint8Array view of the underlying bytes.
 
-### `store.raw8(pointer: Pointer, field: FieldName<R>, val: Uint8Array): Uint8Array`
+Note that the type is set to prevent accidentally attempting to
+read or write past the known length.
+
+### `store.raw8(pointer: Pointer, field: FieldName<R>, val: Uint8Array): Uint8ArrayLength4`
 
 Specify one of the names provided in the `rawFields` list, and
 set the bytes to those specified in the supplied 4-byte
 Uint8Array. Returns an editable 4-byte Uint8Array view of the
 underlying bytes.
 
-### `store.raw16(pointer: Pointer, field: FieldName<R>): Uint16Array`
+Note that the type is set to prevent accidentally attempting to
+read or write past the known length.
+
+### `store.raw16(pointer: Pointer, field: FieldName<R>): Uint16ArrayLength2`
 
 Specify one of the names provided in the `rawFields` list, and
 get an editable 2-word Uint16Array view of the underlying bytes.
 
-### `store.raw16(pointer: Pointer, field: FieldName<R>, val: Uint16Array): Uint16Array`
+Note that the type is set to prevent accidentally attempting to
+read or write past the known length.
+
+### `store.raw16(pointer: Pointer, field: FieldName<R>, val: Uint16Array): Uint16ArrayLength2`
 
 Specify one of the names provided in the `rawFields` list, and
 set the bytes to those specified in the supplied 2-word
 Uint16Array. Returns an editable 2-word Uint16Array view of the
 underlying bytes.
 
-### `store.raw32(pointer: Pointer, field: FieldName<R>): Uint32Array`
+Note that the type is set to prevent accidentally attempting to
+read or write past the known length.
+
+### `store.raw32(pointer: Pointer, field: FieldName<R>): Uint32ArrayLength1`
 
 Specify one of the names provided in the `rawFields` list, and
 get an editable 1-word Uint32Array view of the underlying bytes.
 
-### `store.raw32(pointer: Pointer, field: FieldName<R>, val: Uint32Array): Uint32Array`
+Note that the type is set to prevent accidentally attempting to
+read or write past the known length.
+
+### `store.raw32(pointer: Pointer, field: FieldName<R>, val: Uint32Array): Uint32ArrayLength1`
 
 Specify one of the names provided in the `rawFields` list, and
 set the bytes to those specified in the supplied 1-word
 Uint32Array. Returns an editable 1-word Uint32Array view of the
 underlying bytes.
+
+Note that the type is set to prevent accidentally attempting to
+read or write past the known length.
 
 ### `store.rawAll(pointer: Pointer) => raws`
 

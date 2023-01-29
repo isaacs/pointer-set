@@ -77,6 +77,26 @@ type RawSet<R extends readonly string[]> = {
 }
 type FieldName<K> = K extends readonly string[] ? keyof RefSet<K> : never
 
+// fixed-length UintArray types for raw8 and friends
+type NumArrayValues<K extends readonly number[]> = K[number]
+type NonNumericKeys<T> = {
+  [k in keyof Omit<T, 'length'>]: number extends k ? undefined : T[k]
+}
+type FixedLen<
+  UintArray extends Uint8Array | Uint16Array | Uint32Array,
+  Len extends number,
+  Indexes extends readonly number[]
+> = {
+  [k in NumArrayValues<Indexes>]: number
+} & {
+  readonly length: Len
+} & {
+  [k in keyof NonNumericKeys<UintArray>]: NonNumericKeys<UintArray>[k]
+}
+export type Uint32ArrayLength1 = FixedLen<Uint32Array, 1, [0]>
+export type Uint16ArrayLength2 = FixedLen<Uint16Array, 2, [0, 1]>
+export type Uint8ArrayLength4 = FixedLen<Uint8Array, 4, [0, 1, 2, 3]>
+
 // These private restricted types are here to discourage
 // trying to get fancy doing math on pointers or blockIds,
 // or passing arbitrary or mismatched numbers to methods.
@@ -602,25 +622,29 @@ abstract class PointerSetBase<
    * Get the raw data from the supplied pointer, in the supplied rawField,
    * as a 4-byte Uint8Array view.  Editing the view will update the value.
    */
-  raw8(pointer: Pointer, field: FieldName<R>): Uint8Array
+  raw8(pointer: Pointer, field: FieldName<R>): Uint8ArrayLength4
   /**
    * Set the raw data for the supplied pointer, in the supplied rawField,
    * to the values set in a 4-byte Uint8Array. Returns a 4-byte Uint8Array
    * view. Editing the view will update the value.
    */
-  raw8(pointer: Pointer, field: FieldName<R>, val: Uint8Array): Uint8Array
+  raw8(
+    pointer: Pointer,
+    field: FieldName<R>,
+    val: Uint8Array
+  ): Uint8ArrayLength4
   raw8(
     pointer: Pointer,
     field: FieldName<R>,
     val?: Uint8Array
-  ): Uint8Array {
+  ): Uint8ArrayLength4 {
     const index = this.getIndex(pointer)
     const slab = this.getRawSlab(pointer, field)
     const view = new Uint8Array(
       slab.buffer,
       slab.byteOffset + index * 4,
       4
-    )
+    ) as unknown as Uint8ArrayLength4
     if (val !== undefined) {
       view[0] = val[0]
       view[1] = val[1]
@@ -634,7 +658,7 @@ abstract class PointerSetBase<
    * Get the raw data from the supplied pointer, in the supplied rawField,
    * as a 2-word Uint16Array view.  Editing the view will update the value.
    */
-  raw16(pointer: Pointer, field: FieldName<R>): Uint16Array
+  raw16(pointer: Pointer, field: FieldName<R>): Uint16ArrayLength2
   /**
    * Set the raw data for the supplied pointer, in the supplied rawField,
    * to the values set in a 2-word Uint16Array. Returns a 2-word Uint16Array
@@ -644,19 +668,19 @@ abstract class PointerSetBase<
     pointer: Pointer,
     field: FieldName<R>,
     val: Uint16Array
-  ): Uint16Array
+  ): Uint16ArrayLength2
   raw16(
     pointer: Pointer,
     field: FieldName<R>,
     val?: Uint16Array
-  ): Uint16Array {
+  ): Uint16ArrayLength2 {
     const index = this.getIndex(pointer)
     const slab = this.getRawSlab(pointer, field)
     const view = new Uint16Array(
       slab.buffer,
       slab.byteOffset + index * 4,
       2
-    )
+    ) as unknown as Uint16ArrayLength2
     if (val !== undefined) {
       view[0] = val[0]
       view[1] = val[1]
@@ -668,7 +692,7 @@ abstract class PointerSetBase<
    * Get the raw data from the supplied pointer, in the supplied rawField,
    * as a 1-word Uint32Array view.  Editing the view will update the value.
    */
-  raw32(pointer: Pointer, field: FieldName<R>): Uint32Array
+  raw32(pointer: Pointer, field: FieldName<R>): Uint32ArrayLength1
   /**
    * Set the raw data for the supplied pointer, in the supplied rawField,
    * to the values set in a 1-word Uint32Array. Returns a 1-word Uint32Array
@@ -678,19 +702,19 @@ abstract class PointerSetBase<
     pointer: Pointer,
     field: FieldName<R>,
     val: Uint32Array
-  ): Uint32Array
+  ): Uint32ArrayLength1
   raw32(
     pointer: Pointer,
     field: FieldName<R>,
     val?: Uint32Array
-  ): Uint32Array {
+  ): Uint32ArrayLength1 {
     const slab = this.getRawSlab(pointer, field)
     const index = this.getIndex(pointer)
     const view = new Uint32Array(
       slab.buffer,
       slab.byteOffset + index * 4,
       1
-    )
+    ) as unknown as Uint32ArrayLength1
     if (val !== undefined) {
       view[0] = val[0]
     }

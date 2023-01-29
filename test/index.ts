@@ -343,10 +343,42 @@ t.test('extra raw data views', async t => {
   const f = [] as const
   const r = ['x']
   const store = new PointerSet<null, typeof f, typeof r>(f, 10, r)
+
+  // set all the bits so it'll fail if we get the wrong values
+  store.rawFields[0].fill(-1)
+
   const p = store.alloc(null)
   const u8 = store.raw8(p, 'x')
   const u16 = store.raw16(p, 'x')
   const u32 = store.raw32(p, 'x')
+
+  t.test('type error checking 8', t => {
+    //@ts-expect-error
+    u8[4] = 123
+    //@ts-expect-error
+    let num:number = u8[4]
+    t.equal(num, undefined)
+    t.end()
+  })
+
+  t.test('type error checking 16', t => {
+    //@ts-expect-error
+    u16[2] = 123
+    //@ts-expect-error
+    let num:number = u16[2]
+    t.equal(num, undefined)
+    t.end()
+  })
+
+  t.test('type error checking 32', t => {
+    //@ts-expect-error
+    u32[1] = 123
+    //@ts-expect-error
+    let num:number = u32[1]
+    t.equal(num, undefined)
+    t.end()
+  })
+
   t.equal(store.raw(p, 'x'), 0)
   t.same(u8, [0, 0, 0, 0])
   t.same(u16, [0, 0])
@@ -356,38 +388,42 @@ t.test('extra raw data views', async t => {
   t.same(u8, [1, 0, 0, 0])
   t.same(u16, [1, 0])
   t.same(u32, [1])
-  {
+  t.test('set with raw()', t => {
     const newVal = 1 + (2 << 8) + (3 << 16) + (4 << 24)
     store.raw(p, 'x', newVal)
     t.same(u8, [1, 2, 3, 4])
     t.same(u16, [1 + (2 << 8), 3 + (4 << 8)])
     t.same(u32, [newVal])
-  }
+    t.end()
+  })
 
-  {
+  t.test('set with raw8', t => {
     store.raw8(p, 'x', new Uint8Array([4, 3, 2, 1]))
     const newVal = 4 + (3 << 8) + (2 << 16) + (1 << 24)
     store.raw(p, 'x', newVal)
     t.same(u8, [4, 3, 2, 1])
     t.same(u16, [4 + (3 << 8), 2 + (1 << 8)])
     t.same(u32, [newVal])
-  }
+    t.end()
+  })
 
-  {
+  t.test('set with raw16', t => {
     store.raw16(p, 'x', new Uint16Array([5 + (6 << 8), 7 + (8 << 8)]))
     const newVal = 5 + (6 << 8) + (7 << 16) + (8 << 24)
     store.raw(p, 'x', newVal)
     t.same(u8, [5, 6, 7, 8])
     t.same(u16, [5 + (6 << 8), 7 + (8 << 8)])
     t.same(u32, [newVal])
-  }
+    t.end()
+  })
 
-  {
+  t.test('set with raw32', t => {
     const newVal = 7 + (1 << 8) + (7 << 16) + (9 << 24)
     store.raw32(p, 'x', new Uint32Array([newVal]))
     store.raw(p, 'x', newVal)
     t.same(u8, [7, 1, 7, 9])
     t.same(u16, [7 + (1 << 8), 7 + (9 << 8)])
     t.same(u32, [newVal])
-  }
+    t.end()
+  })
 })
