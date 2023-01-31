@@ -1,25 +1,35 @@
+// Note that the object approach is *significantly* faster, since this data
+// structure is intended to hold the items for a very long time and almost
+// never discard them.  Binary trees are in general optimized for fast lookups
+// of objects by value, and fast sorting on demand, neither of which involve
+// frequent object deletion.
+//
+// See the caveats in the README.md of this project
+
 import { Pointer } from '../'
 import { BinaryTree } from './binary-tree'
 import { BinaryTreeUint32 } from './uint-binary-tree'
+import { BinaryTreeObj, Node } from './object-binary-tree'
 
 const N = 1000000
 const max32 = 2 ** 32 - 1
 const bigNums = process.argv[2] === 'bignums'
 const getNum = (n: number) => (bigNums ? max32 - n : n)
 
-const test = (B: typeof BinaryTree<number> | typeof BinaryTreeUint32) => {
+const test = <P extends Pointer | Node<number>> (B: typeof BinaryTree<number> | typeof BinaryTreeUint32 | typeof BinaryTreeObj<number>) => {
   console.log('testing', B.name)
   const startctor = performance.now()
   const timector = performance.now() - startctor
-  const bt = new B((a, b) => a - b, 65536)
+  const bt = new B((a:number, b:number) => a - b, 65536)
 
   const startfill = performance.now()
-  let root: Pointer = bt.add(getNum(N / 2))
+  let root: P = bt.add(getNum(N / 2)) as P
   for (let i = 1; i < N; i++) {
     const node = bt.add(
       getNum(Math.floor(Math.random() * N)),
+      //@ts-ignore
       root
-    ) as Pointer
+    ) as P
     root = root || node
   }
   const timefill = performance.now() - startfill
@@ -28,8 +38,12 @@ const test = (B: typeof BinaryTree<number> | typeof BinaryTreeUint32) => {
   let prev = 0
   const startwalk = performance.now()
   bt.walk(
-    root as Pointer,
-    value => {
+    //@ts-ignore
+    root,
+    (value: number) => {
+      if (value === undefined) {
+        throw new Error('got empty value')
+      }
       if (value < prev) {
         throw new Error('not sorted!')
       }
@@ -43,15 +57,16 @@ const test = (B: typeof BinaryTree<number> | typeof BinaryTreeUint32) => {
   let maxDepth = 0
   const depths: number[] = []
   const startsearch = performance.now()
-  let failedSearches = 0
+  // let failedSearches = 0
   for (let i = 1; i < N; i++) {
     bt.search(
+      //@ts-ignore
       root,
       getNum(Math.floor(Math.random() * N)),
-      (n: number | undefined, depth: number) => {
-        if (n === undefined) {
-          failedSearches++
-        }
+      (_: number | undefined, depth: number) => {
+        // if (n === undefined) {
+          // failedSearches++
+        // }
         depths.push(depth)
         maxDepth = Math.max(depth, maxDepth)
       }
@@ -105,3 +120,4 @@ const test = (B: typeof BinaryTree<number> | typeof BinaryTreeUint32) => {
 
 test(BinaryTree<number>)
 test(BinaryTreeUint32)
+test(BinaryTreeObj<number>)

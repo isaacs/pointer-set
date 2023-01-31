@@ -10,13 +10,105 @@ dangling pointers, and other perils of manual memory management.
 
 Use with caution!
 
+## Caveats: When to (and when _not_ to) use this, and why
+
+There is a common misconception that working with integers in a
+UintArray slab is inherently always going to be faster than
+working with plain old JavaScript objects.
+
+This is not true!  But it contains a grain of truth, depending on
+your workload, mostly owing to the nature of garbage collection
+in JavaScript runtimes.
+
+Modern JavaScript VMs optimize the most common behaviors of
+JavaScript programs.  This means, usually, lots of more or less
+consistently-shaped objects, most of which are created and then
+discarded relatively quickly, and a handful of which are kept
+pretty much for the life of the program.
+
+VMs differ, of course, but a common approach is to divide up
+objects into "young" and "old" generations.  Anything that's in
+the young generation is expected to be discarded, so the GC keeps
+it handy.  Anything that sticks around beyond that threshold, the
+VM assumes you'll probably never delete it, so it moves it into a
+longer term storage area, where it's not tracked in the same way.
+
+If you _do_ lose the reference to that old object, though, it
+needs to be garbage collected, and walking it in the object graph
+is expensive because it needs to rebuild that information.
+
+So, if you have a cache or something, where you're creating a lot
+of objects, holding onto them for "a while" and then discarding
+the oldest ones as more keep coming in, you're basically asking
+the VM to do the one thing it's worst at.  In that case, using
+manually managed memory in a pre-allocated slab is much better,
+because there's nothing to garbage collect.
+
+On the other hand, if you're creating objects and looking up
+their properties very frequently, or if you're always keeping
+these entries either for a very short time or essentially
+forever, doing this by yourself with bitwise integer arithmetic
+is _very unlikely_ to be more optimized than the code paths the
+VM has to handle object property accesses.  Those are going to be
+more optimized, because the VM is designed specifically for that
+purpose.  And, it's going to be a much extremely inconvenient
+besides.
+
+Another thing that can be really slow is passing object
+references from the JS environment to some other environment that
+is not managed (or _separately_ managed) by the VM.  For example,
+crosing the C++ and JS layers in a Node.js `.node` addon or
+passing objects to Workers.  In these sorts of cases, the object
+reference has to be tracked differently, because the garbage
+collection semantics get more complicated.  But, if both sides
+have a reference to the same block of memory in a Uint32Array,
+then they can both update it, and they'll see the changes
+immediately.  This is fast, powerful, and dangerous.
+
+You should profile your program with realistic workloads before
+embarking on a journey of performance optimization.  You should
+_also_ profile your program with realistic workloads _after_
+making a change intended to improve performance.
+
+As it happens, the initial use case I had for this module made it
+seem like a pointer-based solution would be promising.  And,
+since I'd already done something similar for
+[lru-cache](http://npm.im/lru-cache), I thought I'd try it.  As
+it happens, it's about 40% slower than just using plain old
+JavaScript objects, so I'm not sure what this module is even for
+and won't be using it.  But it might be beneficial to someone
+else, and it was fun to explore, so that's OSS working as
+intended :)
+
+**tl;dr**
+
+- Profile before (and after) you optimize.
+- Use pointers if your workload involves frequently discarding
+  objects that have made it to the "older" generation of objects.
+  If entries are usually discarded frequently after creation, or
+  rarely discarded at all, JS objects are likely better.
+- Use pointers if you need the data to be available to code that
+  doesn't run on the JS VM (ie, a C++ `.node` binding, WASM,
+  etc.)
+- Otherwise, before you try some fancy data structure, maybe just
+  use plain old JS objects and arrays, they're pretty fast
+  actually.
+
 ## USAGE
+
+Note that the example here and in the [examples](./examples)
+folder are using very simple data structures, which would almost
+certainly be more performant to just use plain old JavaScript
+objects.  (See the caveats section above.)
+
+But it's easier to show the API with a simple example than with a
+complex one.
 
 ```js
 // hybrid module, either works
-import { PointerSet } from '@isaacs/pointer-set'
+import { PointerSet } from 'pointer-set'
 // or
-const { PointerSet } = require('@isaacs/pointer-set')
+const { PointerSet } = require('pointer-set')
 
 // a doubly-linked list, block size of 256 pointers
 // this will allocate 1kb per block (4 bytes per pointer)
@@ -32,7 +124,7 @@ const store = new PointerSet<string, typeof fields, []>(fields, 256)
 // typescript generics are all-or-nothing, so we can't do this:
 // const store = new PointerSet<string>(fields, 256)
 // but we can use a helper class:
-import { PointerSetInferFields } from '@isaacs/pointer-set'
+import { PointerSetInferFields } from 'pointer-set'
 const FieldsInferred = PointerSetInferFields(fields)
 const storeInferred = new FieldsInferred<string>()
 
